@@ -1,0 +1,224 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Product;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class ProductTest extends TestCase
+{
+    use RefreshDatabase;
+
+    // TESTE 1 - Criar um produto
+    public function test_deve_criar_um_produto(): void
+    {
+        $dados = [
+            'name' => 'Mouse Gamer',
+            'price' => 150.00,
+        ];
+
+        $response = $this->postJson('/api/products', $dados);
+
+        $response->assertStatus(201);
+
+        $response->assertJsonPath('data.name', 'Mouse Gamer');
+
+        $this->assertDatabaseHas('products', [
+            'name' => 'Mouse Gamer',
+            'price' => 150.00,
+        ]);
+    }
+
+    // TESTE 2 - Listar produtos
+    public function test_deve_listar_produtos(): void
+    {
+        Product::create([
+            'name' => 'Teclado Mecânico',
+            'price' => 250.00,
+        ]);
+
+        Product::create([
+            'name' => 'Mouse Gamer',
+            'price' => 150.00,
+        ]);
+
+        $response = $this->getJson('/api/products');
+
+        $response->assertStatus(200);
+
+        $response->assertJsonCount(2, 'data');
+
+        $response->assertJsonFragment([
+            'name' => 'Teclado Mecânico',
+        ]);
+
+        $response->assertJsonFragment([
+            'name' => 'Mouse Gamer',
+        ]);
+    }
+
+    // TESTE 3 - Consultar produto por ID
+    public function test_deve_consultar_um_produto_por_id(): void
+    {
+        $product = Product::create([
+            'name' => 'Monitor Gamer',
+            'price' => 899.90,
+        ]);
+
+        $response = $this->getJson("/api/products/{$product->id}");
+
+        $response->assertStatus(200);
+
+        $response->assertJsonPath('data.id', $product->id);
+
+        $response->assertJsonPath('data.name', 'Monitor Gamer');
+    }
+
+    // TESTE 4 - Produto inexistente retorna 404
+    public function test_deve_retornar_404_para_produto_inexistente(): void
+    {
+        $response = $this->getJson('/api/products/99999');
+
+        $response->assertStatus(404);
+
+        $response->assertJson([
+            'message' => 'Produto não encontrado.',
+        ]);
+    }
+
+    // TESTE 5 - Atualizar produto
+    public function test_deve_atualizar_um_produto(): void
+    {
+        $product = Product::create([
+            'name' => 'Mouse Antigo',
+            'price' => 50.00,
+        ]);
+
+        $dadosAtualizados = [
+            'name' => 'Mouse Gamer RGB',
+            'price' => 199.90,
+        ];
+
+        $response = $this->putJson(
+            "/api/products/{$product->id}",
+            $dadosAtualizados
+        );
+
+        $response->assertStatus(200);
+
+        $response->assertJsonPath('data.name', 'Mouse Gamer RGB');
+
+        $this->assertDatabaseHas('products', [
+            'id' => $product->id,
+            'name' => 'Mouse Gamer RGB',
+            'price' => 199.90,
+        ]);
+    }
+
+    // TESTE 6 - Excluir produto
+    public function test_deve_excluir_um_produto(): void
+    {
+        $product = Product::create([
+            'name' => 'Produto para Excluir',
+            'price' => 100.00,
+        ]);
+
+        $response = $this->deleteJson(
+            "/api/products/{$product->id}"
+        );
+
+        $response->assertNoContent();
+
+        $this->assertDatabaseMissing('products', [
+            'id' => $product->id,
+        ]);
+    }
+
+    // TESTE 7 - Impedir preço negativo no cadastro
+    public function test_nao_deve_criar_produto_com_preco_negativo(): void
+    {
+        $dados = [
+            'name' => 'Produto Inválido',
+            'price' => -50,
+        ];
+
+        $response = $this->postJson('/api/products', $dados);
+
+        $response->assertStatus(422);
+
+        $response->assertJsonValidationErrors(['price']);
+
+        $this->assertDatabaseCount('products', 0);
+    }
+
+    // TESTE 8 - Impedir cadastro sem nome
+    public function test_nao_deve_criar_produto_sem_nome(): void
+    {
+        $dados = [
+            'price' => 100.00,
+        ];
+
+        $response = $this->postJson('/api/products', $dados);
+
+        $response->assertStatus(422);
+
+        $response->assertJsonValidationErrors(['name']);
+
+        $this->assertDatabaseCount('products', 0);
+    }
+
+    // TESTE 9 - Impedir atualização com preço negativo
+    public function test_nao_deve_atualizar_produto_com_preco_negativo(): void
+    {
+        $product = Product::create([
+            'name' => 'Teclado',
+            'price' => 150.00,
+        ]);
+
+        $response = $this->putJson(
+            "/api/products/{$product->id}",
+            [
+                'name' => 'Teclado Atualizado',
+                'price' => -100,
+            ]
+        );
+
+        $response->assertStatus(422);
+
+        $response->assertJsonValidationErrors(['price']);
+
+        $this->assertDatabaseHas('products', [
+            'id' => $product->id,
+            'name' => 'Teclado',
+            'price' => 150.00,
+        ]);
+    }
+
+    // TESTE 10 - Impedir atualização de produto inexistente
+    public function test_nao_deve_atualizar_produto_inexistente(): void
+    {
+        $response = $this->putJson('/api/products/99999', [
+            'name' => 'Produto Atualizado',
+            'price' => 100.00,
+        ]);
+
+        $response->assertStatus(404);
+
+        $response->assertJson([
+            'message' => 'Produto não encontrado.',
+        ]);
+    }
+
+    // TESTE 11 - Impedir exclusão de produto inexistente
+    public function test_nao_deve_excluir_produto_inexistente(): void
+    {
+        $response = $this->deleteJson('/api/products/99999');
+
+        $response->assertStatus(404);
+
+        $response->assertJson([
+            'message' => 'Produto não encontrado.',
+        ]);
+    }
+}
