@@ -43,4 +43,56 @@ class AuthenticationTest extends TestCase
 
         $response->assertJsonPath('email', $user->email);
     }
+
+    // TESTE 3 - Bloquear cadastro sem autenticação
+    public function test_usuario_nao_autenticado_nao_pode_criar_produto(): void
+    {
+    $response = $this->postJson('/api/products', [
+        'name' => 'Mouse Gamer',
+        'price' => 150,
+    ]);
+
+    $response->assertStatus(401);
+
+    $this->assertDatabaseCount('products', 0);
+    }
+
+// TESTE 4 - Bloquear atualização sem autenticação
+public function test_usuario_nao_autenticado_nao_pode_atualizar_produto(): void
+    {
+    $product = \App\Models\Product::create([
+        'name' => 'Teclado',
+        'price' => 100,
+    ]);
+
+    $response = $this->putJson("/api/products/{$product->id}", [
+        'name' => 'Teclado Atualizado',
+        'price' => 200,
+    ]);
+
+    $response->assertStatus(401);
+
+    $this->assertDatabaseHas('products', [
+        'id' => $product->id,
+        'name' => 'Teclado',
+        'price' => 100,
+    ]);
+    }
+
+// TESTE 5 - Bloquear exclusão sem autenticação
+public function test_usuario_nao_autenticado_nao_pode_excluir_produto(): void
+    {
+    $product = \App\Models\Product::create([
+        'name' => 'Monitor',
+        'price' => 800,
+    ]);
+
+    $response = $this->deleteJson("/api/products/{$product->id}");
+
+    $response->assertStatus(401);
+
+    $this->assertDatabaseHas('products', [
+        'id' => $product->id,
+    ]);
+    }
 }

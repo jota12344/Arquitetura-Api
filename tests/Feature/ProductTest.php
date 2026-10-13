@@ -5,14 +5,24 @@ namespace Tests\Feature;
 use App\Models\Product;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use App\Models\User;
+use Laravel\Sanctum\Sanctum;
 
 class ProductTest extends TestCase
 {
     use RefreshDatabase;
+    protected function autenticarUsuario(): void
+{
+    $user = User::factory()->create();
+
+    Sanctum::actingAs($user);
+}
 
     // TESTE 1 - Criar um produto
     public function test_deve_criar_um_produto(): void
     {
+        $this->autenticarUsuario();
+
         $dados = [
             'name' => 'Mouse Gamer',
             'price' => 150.00,
@@ -90,6 +100,8 @@ class ProductTest extends TestCase
     // TESTE 5 - Atualizar produto
     public function test_deve_atualizar_um_produto(): void
     {
+        $this->autenticarUsuario();
+
         $product = Product::create([
             'name' => 'Mouse Antigo',
             'price' => 50.00,
@@ -119,6 +131,8 @@ class ProductTest extends TestCase
     // TESTE 6 - Excluir produto
     public function test_deve_excluir_um_produto(): void
     {
+        $this->autenticarUsuario();
+    
         $product = Product::create([
             'name' => 'Produto para Excluir',
             'price' => 100.00,
@@ -138,6 +152,8 @@ class ProductTest extends TestCase
     // TESTE 7 - Impedir preço negativo no cadastro
     public function test_nao_deve_criar_produto_com_preco_negativo(): void
     {
+        $this->autenticarUsuario();
+
         $dados = [
             'name' => 'Produto Inválido',
             'price' => -50,
@@ -155,6 +171,8 @@ class ProductTest extends TestCase
     // TESTE 8 - Impedir cadastro sem nome
     public function test_nao_deve_criar_produto_sem_nome(): void
     {
+        $this->autenticarUsuario();
+
         $dados = [
             'price' => 100.00,
         ];
@@ -171,6 +189,8 @@ class ProductTest extends TestCase
     // TESTE 9 - Impedir atualização com preço negativo
     public function test_nao_deve_atualizar_produto_com_preco_negativo(): void
     {
+        $this->autenticarUsuario();
+
         $product = Product::create([
             'name' => 'Teclado',
             'price' => 150.00,
@@ -198,6 +218,8 @@ class ProductTest extends TestCase
     // TESTE 10 - Impedir atualização de produto inexistente
     public function test_nao_deve_atualizar_produto_inexistente(): void
     {
+        $this->autenticarUsuario();
+
         $response = $this->putJson('/api/products/99999', [
             'name' => 'Produto Atualizado',
             'price' => 100.00,
@@ -213,6 +235,8 @@ class ProductTest extends TestCase
     // TESTE 11 - Impedir exclusão de produto inexistente
     public function test_nao_deve_excluir_produto_inexistente(): void
     {
+        $this->autenticarUsuario();
+
         $response = $this->deleteJson('/api/products/99999');
 
         $response->assertStatus(404);
@@ -225,7 +249,9 @@ class ProductTest extends TestCase
     // TESTE 12 - Impedir cadastro com múltiplos campos inválidos
     public function test_nao_deve_criar_produto_com_nome_vazio_e_preco_negativo(): void
     {
-    $dados = [
+        $this->autenticarUsuario();
+
+        $dados = [
         'name' => '',
         'price' => -50,
     ];
