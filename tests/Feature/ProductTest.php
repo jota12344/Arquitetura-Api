@@ -221,4 +221,29 @@ class ProductTest extends TestCase
             'message' => 'Produto não encontrado.',
         ]);
     }
+    
+    // TESTE 12 - Impedir cadastro com múltiplos campos inválidos
+    public function test_nao_deve_criar_produto_com_nome_vazio_e_preco_negativo(): void
+    {
+    $dados = [
+        'name' => '',
+        'price' => -50,
+    ];
+
+    $response = $this->postJson('/api/products', $dados);
+
+    // Verifica se a API rejeitou os dados
+    $response->assertStatus(422);
+
+    // Verifica se os dois campos possuem erros
+    $response->assertJsonValidationErrors([
+        'name',
+        'price',
+    ]);
+
+    // Garante que nenhum produto foi cadastrado
+    $this->assertDatabaseCount('products', 0);
+    }
 }
+
+
