@@ -3,6 +3,11 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\AuthController;
+
+// Rota pública de autenticação
+Route::post('/login', [AuthController::class, 'login'])
+    ->name('auth.login');
 
 // Rota protegida: retorna o usuário autenticado
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
@@ -27,5 +32,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::delete('/products/{id}', [ProductController::class, 'destroy'])
         ->name('product.destroy');
+
+    Route::post('/logout', [AuthController::class, 'logout'])
+    ->name('auth.logout');
 
 });
