@@ -2,35 +2,29 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
+use App\Http\Requests\LoginRequest;
+use App\Services\AuthService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
-    public function login(Request $request)
+    protected AuthService $service;
+
+    // O Laravel injeta automaticamente o AuthService
+    public function __construct(AuthService $service)
     {
-        // Valida os dados recebidos
-        $dados = $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required', 'string'],
-        ]);
+        $this->service = $service;
+    }
 
-        // Procura o usuário pelo e-mail
-        $user = User::where('email', $dados['email'])->first();
+    public function login(LoginRequest $request)
+    {
+        // Recupera os dados validados pelo LoginRequest
+        $dados = $request->validated();
 
-        // Verifica se o usuário existe e se a senha está correta
-        if (!$user || !Hash::check($dados['password'], $user->password)) {
-            throw ValidationException::withMessages([
-                'email' => ['As credenciais informadas são inválidas.'],
-            ]);
-        }
+        // Delega a autenticação ao Service
+        $token = $this->service->login($dados);
 
-        // Gera um token de acesso
-        $token = $user->createToken('api-token')->plainTextToken;
-
-        // Retorna o token para o cliente
+        // Retorna a resposta HTTP
         return response()->json([
             'message' => 'Login realizado com sucesso.',
             'token' => $token,
@@ -40,14 +34,11 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-    // Recupera o token utilizado na requisição
-    $token = $request->user()->currentAccessToken();
+        // Delega a revogação do token ao Service
+        $this->service->logout($request->user());
 
-    // Revoga o token atual
-    $token->delete();
-
-    return response()->json([
-        'message' => 'Logout realizado com sucesso.',
-    ], 200);
+        return response()->json([
+            'message' => 'Logout realizado com sucesso.',
+        ], 200);
     }
 }
