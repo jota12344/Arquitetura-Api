@@ -97,57 +97,60 @@ class ProductTest extends TestCase
         ]);
     }
 
-    // TESTE 5 - Atualizar produto
-    public function test_deve_atualizar_um_produto(): void
-    {
-        $this->autenticarUsuario();
+   // TESTE 5 - Atualizar produto
+public function test_deve_atualizar_um_produto(): void
+{
+    $this->autenticarUsuario();
 
-        $product = Product::create([
-            'name' => 'Mouse Antigo',
-            'price' => 50.00,
-        ]);
+    $product = Product::create([
+        'name' => 'Mouse Antigo',
+        'price' => 50.00,
+        'user_id' => auth()->id(),
+    ]);
 
-        $dadosAtualizados = [
-            'name' => 'Mouse Gamer RGB',
-            'price' => 199.90,
-        ];
+    $dadosAtualizados = [
+        'name' => 'Mouse Gamer RGB',
+        'price' => 199.90,
+    ];
 
-        $response = $this->putJson(
-            "/api/products/{$product->id}",
-            $dadosAtualizados
-        );
+    $response = $this->putJson(
+        "/api/products/{$product->id}",
+        $dadosAtualizados
+    );
 
-        $response->assertStatus(200);
+    $response->assertStatus(200);
 
-        $response->assertJsonPath('data.name', 'Mouse Gamer RGB');
+    $response->assertJsonPath('data.name', 'Mouse Gamer RGB');
 
-        $this->assertDatabaseHas('products', [
-            'id' => $product->id,
-            'name' => 'Mouse Gamer RGB',
-            'price' => 199.90,
-        ]);
-    }
+    $this->assertDatabaseHas('products', [
+        'id' => $product->id,
+        'name' => 'Mouse Gamer RGB',
+        'price' => 199.90,
+        'user_id' => auth()->id(),
+    ]);
+}
 
-    // TESTE 6 - Excluir produto
-    public function test_deve_excluir_um_produto(): void
-    {
-        $this->autenticarUsuario();
-    
-        $product = Product::create([
-            'name' => 'Produto para Excluir',
-            'price' => 100.00,
-        ]);
+   // TESTE 6 - Excluir produto
+public function test_deve_excluir_um_produto(): void
+{
+    $this->autenticarUsuario();
 
-        $response = $this->deleteJson(
-            "/api/products/{$product->id}"
-        );
+    $product = Product::create([
+        'name' => 'Produto para Excluir',
+        'price' => 100.00,
+        'user_id' => auth()->id(),
+    ]);
 
-        $response->assertNoContent();
+    $response = $this->deleteJson(
+        "/api/products/{$product->id}"
+    );
 
-        $this->assertDatabaseMissing('products', [
-            'id' => $product->id,
-        ]);
-    }
+    $response->assertNoContent();
+
+    $this->assertDatabaseMissing('products', [
+        'id' => $product->id,
+    ]);
+}
 
     // TESTE 7 - Impedir preço negativo no cadastro
     public function test_nao_deve_criar_produto_com_preco_negativo(): void
@@ -270,6 +273,76 @@ class ProductTest extends TestCase
     // Garante que nenhum produto foi cadastrado
     $this->assertDatabaseCount('products', 0);
     }
+
+    // TESTE 13 - Impedir atualização de produto de outro usuário
+public function test_nao_deve_atualizar_produto_de_outro_usuario(): void
+{
+    // Cria dois usuários
+    $usuario = User::factory()->create();
+    $outroUsuario = User::factory()->create();
+
+    // Cria um produto pertencente ao outro usuário
+    $product = Product::create([
+        'name' => 'Mouse Gamer',
+        'price' => 150.00,
+        'user_id' => $outroUsuario->id,
+    ]);
+
+    // Autentica o primeiro usuário
+    $this->actingAs($usuario);
+
+    // Tenta atualizar o produto de outra pessoa
+    $response = $this->putJson(
+        "/api/products/{$product->id}",
+        [
+            'name' => 'Mouse Alterado',
+            'price' => 200.00,
+        ]
+    );
+
+    // A API deve negar a atualização
+    $response->assertStatus(403);
+
+    // Confirma que os dados originais foram preservados
+    $this->assertDatabaseHas('products', [
+        'id' => $product->id,
+        'name' => 'Mouse Gamer',
+        'user_id' => $outroUsuario->id,
+    ]);
+}
+
+// TESTE 14 - Impedir exclusão de produto de outro usuário
+public function test_nao_deve_excluir_produto_de_outro_usuario(): void
+{
+    // Cria dois usuários diferentes
+    $usuario = User::factory()->create();
+    $outroUsuario = User::factory()->create();
+
+    // Cria um produto pertencente ao outro usuário
+    $product = Product::create([
+        'name' => 'Teclado Mecânico',
+        'price' => 250.00,
+        'user_id' => $outroUsuario->id,
+    ]);
+
+    // Autentica o primeiro usuário
+    $this->actingAs($usuario);
+
+    // Tenta excluir o produto de outra pessoa
+    $response = $this->deleteJson(
+        "/api/products/{$product->id}"
+    );
+
+    // Verifica que a API negou a exclusão
+    $response->assertStatus(403);
+
+    // Verifica que o produto continua no banco de dados
+    $this->assertDatabaseHas('products', [
+        'id' => $product->id,
+        'name' => 'Teclado Mecânico',
+        'user_id' => $outroUsuario->id,
+    ]);
+}
 }
 
 
