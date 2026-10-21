@@ -6,7 +6,6 @@ use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
 use App\Http\Resources\ProductResource;
 use App\Services\ProductService;
-use App\Models\Product;
 use Illuminate\Support\Facades\Gate;
 
 class ProductController extends Controller
@@ -45,15 +44,13 @@ class ProductController extends Controller
 
         return new ProductResource($product);
     }
-    public function update(UpdateProductRequest $request, int $id)
-    {
-    // Busca o produto ou retorna 404
-    $product = Product::findOrFail($id);
 
-    // Verifica se o usuário pode atualizar este produto
+  public function update(UpdateProductRequest $request, int $id)
+    {
+    $product = $this->service->findById($id);
     Gate::authorize('update', $product);
 
-    // Atualiza usando nossa arquitetura em camadas
+
     $updatedProduct = $this->service->update(
         $id,
         $request->validated()
@@ -63,16 +60,13 @@ class ProductController extends Controller
     }
 
     public function destroy(int $id)
-    {
-    // Busca o produto ou retorna 404
-    $product = Product::findOrFail($id);
+{
+    $product = $this->service->findById($id);
 
-    // Verifica se o usuário pode excluir este produto
     Gate::authorize('delete', $product);
 
-    // Exclui usando o Service
     $this->service->delete($id);
 
     return response()->noContent();
-    }
+}
 }
