@@ -343,6 +343,97 @@ public function test_nao_deve_excluir_produto_de_outro_usuario(): void
         'user_id' => $outroUsuario->id,
     ]);
 }
+
+// TESTE 15 - Listar produtos com paginação
+public function test_deve_listar_produtos_com_paginacao(): void
+{
+    // Cria 25 produtos no banco de testes
+    for ($i = 1; $i <= 25; $i++) {
+        Product::create([
+            'name' => "Produto {$i}",
+            'price' => 100.00,
+        ]);
+    }
+
+    // Consulta a primeira página
+    $response = $this->getJson('/api/products?page=1');
+
+    // Verifica se a requisição funcionou
+    $response->assertStatus(200);
+
+    // Verifica se retornou exatamente 10 produtos
+    $response->assertJsonCount(10, 'data');
+
+    // Verifica os metadados da paginação
+    $response->assertJsonPath('meta.current_page', 1);
+    $response->assertJsonPath('meta.last_page', 3);
+    $response->assertJsonPath('meta.per_page', 10);
+    $response->assertJsonPath('meta.total', 25);
+}
+
+// TESTE 16 - Verificar segunda página da listagem
+public function test_deve_listar_segunda_pagina_de_produtos(): void
+{
+    // Cria 25 produtos
+    for ($i = 1; $i <= 25; $i++) {
+        Product::create([
+            'name' => "Produto {$i}",
+            'price' => 100.00,
+        ]);
+    }
+
+    // Consulta a segunda página
+    $response = $this->getJson('/api/products?page=2');
+
+    // Verifica o status HTTP
+    $response->assertStatus(200);
+
+    // A segunda página deve conter 10 produtos
+    $response->assertJsonCount(10, 'data');
+
+    // Verifica os metadados
+    $response->assertJsonPath('meta.current_page', 2);
+    $response->assertJsonPath('meta.last_page', 3);
+    $response->assertJsonPath('meta.total', 25);
+
+    // Confirma a ordenação decrescente
+    $response->assertJsonPath('data.0.name', 'Produto 15');
+    $response->assertJsonPath('data.9.name', 'Produto 6');
+}
+
+// TESTE 17 - Verificar última página da listagem
+public function test_deve_listar_ultima_pagina_de_produtos(): void
+{
+    // Cria 25 produtos no banco de testes
+    for ($i = 1; $i <= 25; $i++) {
+        Product::create([
+            'name' => "Produto {$i}",
+            'price' => 100.00,
+        ]);
+    }
+
+    // Consulta a terceira página
+    $response = $this->getJson('/api/products?page=3');
+
+    // Verifica o status HTTP
+    $response->assertStatus(200);
+
+    // A última página deve conter apenas 5 produtos
+    $response->assertJsonCount(5, 'data');
+
+    // Verifica os metadados da paginação
+    $response->assertJsonPath('meta.current_page', 3);
+    $response->assertJsonPath('meta.last_page', 3);
+    $response->assertJsonPath('meta.per_page', 10);
+    $response->assertJsonPath('meta.total', 25);
+
+    // Confirma a ordenação decrescente
+    $response->assertJsonPath('data.0.name', 'Produto 5');
+    $response->assertJsonPath('data.4.name', 'Produto 1');
+
+    // Confirma que não existe próxima página
+    $response->assertJsonPath('links.next', null);
+}
 }
 
 
