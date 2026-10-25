@@ -7,6 +7,7 @@ use App\Http\Controllers\AuthController;
 
 // Rota pública de autenticação
 Route::post('/login', [AuthController::class, 'login'])
+    ->middleware('throttle:login')
     ->name('auth.login');
 
 // Rota protegida: retorna o usuário autenticado
@@ -19,6 +20,7 @@ Route::get('/products', [ProductController::class, 'index'])
     ->name('product.index');
 
 Route::get('/products/{id}', [ProductController::class, 'show'])
+    ->whereNumber('id')
     ->name('product.show');
 
 // Rotas protegidas: exigem autenticação
@@ -28,9 +30,11 @@ Route::middleware('auth:sanctum')->group(function () {
         ->name('product.store');
 
     Route::put('/products/{id}', [ProductController::class, 'update'])
+        ->whereNumber('id')
         ->name('product.update');
 
     Route::delete('/products/{id}', [ProductController::class, 'destroy'])
+        ->whereNumber('id')
         ->name('product.destroy');
 
     Route::post('/logout', [AuthController::class, 'logout'])

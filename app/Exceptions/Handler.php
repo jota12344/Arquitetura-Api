@@ -24,6 +24,11 @@ class Handler extends ExceptionHandler
         'password_confirmation',
     ];
 
+    protected function shouldReturnJson($request, Throwable $e)
+    {
+        return $request->is('api/*') || parent::shouldReturnJson($request, $e);
+    }
+
     public function register()
     {
         $this->reportable(function (Throwable $e) {
