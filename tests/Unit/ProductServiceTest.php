@@ -46,11 +46,10 @@ class ProductServiceTest extends TestCase
         ];
 
         $this->repositoryMock
-            ->shouldReceive('getAll')
-            ->once()
-            ->withNoArgs()
-            ->andReturn($produtos);
-
+        ->shouldReceive('getAll')
+        ->once()
+        ->with([])
+        ->andReturn($produtos);
         $resultado = $this->service->getAll();
 
         $this->assertEquals($produtos, $resultado);

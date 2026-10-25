@@ -15,10 +15,9 @@ class ProductService
         $this->repository = $repository;
     }
 
-    // Lista todos os produtos
-    public function getAll()
+    public function getAll(array $filters = [])
     {
-        return $this->repository->getAll();
+    return $this->repository->getAll($filters);
     }
 
     // Busca um produto pelo ID

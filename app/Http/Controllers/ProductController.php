@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateProductRequest;
 use App\Http\Resources\ProductResource;
 use App\Services\ProductService;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
@@ -17,11 +18,18 @@ class ProductController extends Controller
         $this->service = $service;
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $products = $this->service->getAll();
+    // Recebe e valida o filtro enviado pela URL
+    $filters = $request->validate([
+        'name' => ['sometimes', 'string', 'max:255'],
+    ]);
 
-        return ProductResource::collection($products);
+    // Encaminha os filtros ao Service
+    $products = $this->service->getAll($filters);
+
+    // Retorna os produtos utilizando o Resource
+    return ProductResource::collection($products);
     }
 
    public function store(StoreProductRequest $request)

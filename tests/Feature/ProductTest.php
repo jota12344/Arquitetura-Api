@@ -434,6 +434,60 @@ public function test_deve_listar_ultima_pagina_de_produtos(): void
     // Confirma que não existe próxima página
     $response->assertJsonPath('links.next', null);
 }
+
+// TESTE 18 - Buscar produtos pelo nome
+public function test_deve_filtrar_produtos_pelo_nome(): void
+{
+    // Cria produtos para testar a busca
+    Product::create([
+        'name' => 'Mouse Gamer',
+        'price' => 150.00,
+    ]);
+
+    Product::create([
+        'name' => 'Mouse Sem Fio',
+        'price' => 100.00,
+    ]);
+
+    Product::create([
+        'name' => 'Teclado Mecânico',
+        'price' => 250.00,
+    ]);
+
+    // Realiza a busca pelo nome
+    $response = $this->getJson('/api/products?name=Mouse');
+
+    // Verifica se a requisição funcionou
+    $response->assertStatus(200);
+
+    // Apenas dois produtos devem ser retornados
+    $response->assertJsonCount(2, 'data');
+
+    // Confirma os produtos encontrados
+    $response->assertJsonPath('data.0.name', 'Mouse Sem Fio');
+    $response->assertJsonPath('data.1.name', 'Mouse Gamer');
+
+    // Confirma que o filtro também afeta a paginação
+    $response->assertJsonPath('meta.total', 2);
+}
+
+// TESTE 19 - Rejeitar filtro de nome muito longo
+public function test_deve_rejeitar_filtro_de_nome_muito_longo(): void
+{
+    // Cria uma string com 256 caracteres
+    $nomeMuitoLongo = str_repeat('A', 256);
+
+    // Envia o filtro inválido pela URL
+    $response = $this->getJson(
+        '/api/products?name=' . $nomeMuitoLongo
+    );
+
+    // Verifica se a API rejeitou a requisição
+    $response->assertStatus(422);
+
+    // Verifica se o erro corresponde ao campo name
+    $response->assertJsonValidationErrors(['name']);
+}
 }
 
 

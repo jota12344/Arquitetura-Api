@@ -7,10 +7,34 @@ use App\Models\Product;
 
 class ProductRepository implements ProductRepositoryInterface
 {
-    public function getAll()
-    {
-        return Product::orderBy('id', 'desc')->paginate(10);
+ 
+public function getAll(array $filters = [])
+{
+    // Inicia a consulta
+    $query = Product::query();
+
+    // Filtra pelo nome
+    if (!empty($filters['name'])) {
+        $query->where(
+            'name',
+            'like',
+            '%' . $filters['name'] . '%'
+        );
     }
+
+    // Filtra pelo preço mínimo
+    if (isset($filters['min_price'])) {
+        $query->where('price', '>=', $filters['min_price']);
+    }
+
+    // Filtra pelo preço máximo
+    if (isset($filters['max_price'])) {
+        $query->where('price', '<=', $filters['max_price']);
+    }
+
+    // Ordena e pagina os resultados
+    return $query->orderBy('id', 'desc')->paginate(10);
+}
 
     public function findById(int $id)
     {
