@@ -20,16 +20,20 @@ class ProductController extends Controller
 
     public function index(Request $request)
     {
-    // Recebe e valida o filtro enviado pela URL
-    $filters = $request->validate([
-        'name' => ['sometimes', 'string', 'max:255'],
-    ]);
+        $filters = $request->validate([
+            'name' => ['sometimes', 'string', 'max:255'],
+            'min_price' => ['bail', 'sometimes', 'numeric', 'min:0'],
+            'max_price' => [
+                'bail', 'sometimes', 'numeric', 'min:0',
+                ...($request->has('min_price') ? ['gte:min_price'] : []),
+            ],
+            'page' => ['sometimes', 'integer', 'min:1'],
+        ]);
 
-    // Encaminha os filtros ao Service
-    $products = $this->service->getAll($filters);
+        $products = $this->service->getAll($filters);
+        $products->appends($filters);
 
-    // Retorna os produtos utilizando o Resource
-    return ProductResource::collection($products);
+        return ProductResource::collection($products);
     }
 
    public function store(StoreProductRequest $request)

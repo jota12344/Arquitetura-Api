@@ -14,7 +14,7 @@ public function getAll(array $filters = [])
     $query = Product::query();
 
     // Filtra pelo nome
-    if (!empty($filters['name'])) {
+    if (isset($filters['name']) && $filters['name'] !== '') {
         $query->where(
             'name',
             'like',

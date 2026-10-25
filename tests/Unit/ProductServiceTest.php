@@ -55,6 +55,20 @@ class ProductServiceTest extends TestCase
         $this->assertEquals($produtos, $resultado);
     }
 
+    public function test_deve_encaminhar_filtros_ao_repository(): void
+    {
+        $filters = ['name' => 'Mouse', 'min_price' => 100, 'max_price' => 500];
+        $products = [['id' => 1, 'name' => 'Mouse Gamer', 'price' => 150]];
+
+        $this->repositoryMock
+            ->shouldReceive('getAll')
+            ->once()
+            ->with($filters)
+            ->andReturn($products);
+
+        $this->assertSame($products, $this->service->getAll($filters));
+    }
+
     // TESTE 2 - Buscar produto pelo ID
     public function test_deve_buscar_produto_pelo_id(): void
     {
