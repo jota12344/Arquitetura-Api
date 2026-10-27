@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CategoryController;
 
 // Rota pública de autenticação
 Route::post('/login', [AuthController::class, 'login'])
@@ -41,3 +42,10 @@ Route::middleware('auth:sanctum')->group(function () {
     ->name('auth.logout');
 
 });
+
+// Consultas públicas de categorias.
+Route::get('/categories', [CategoryController::class, 'index'])
+    ->name('category.index');
+Route::get('/categories/{id}', [CategoryController::class, 'show'])
+    ->whereNumber('id')
+    ->name('category.show');

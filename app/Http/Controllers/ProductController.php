@@ -21,6 +21,7 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         $filters = $request->validate([
+            'category_id' => ['bail', 'sometimes', 'integer', 'exists:categories,id'],
             'name' => ['sometimes', 'string', 'max:255'],
             'min_price' => ['bail', 'sometimes', 'numeric', 'min:0'],
             'max_price' => [

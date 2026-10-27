@@ -11,7 +11,7 @@ class ProductRepository implements ProductRepositoryInterface
 public function getAll(array $filters = [])
 {
     // Inicia a consulta
-    $query = Product::query();
+    $query = Product::query()->with('category');
 
     // Filtra pelo nome
     if (isset($filters['name']) && $filters['name'] !== '') {
@@ -32,18 +32,22 @@ public function getAll(array $filters = [])
         $query->where('price', '<=', $filters['max_price']);
     }
 
+    if (isset($filters['category_id'])) {
+        $query->where('category_id', $filters['category_id']);
+    }
+
     // Ordena e pagina os resultados
     return $query->orderBy('id', 'desc')->paginate(10);
 }
 
     public function findById(int $id)
     {
-        return Product::findOrFail($id);
+        return Product::with('category')->findOrFail($id);
     }
 
     public function create(array $data)
     {
-        return Product::create($data);
+        return Product::create($data)->load('category');
     }
 
     public function update(int $id, array $data)
@@ -52,7 +56,7 @@ public function getAll(array $filters = [])
 
         $product->update($data);
 
-        return $product;
+        return $product->load('category');
     }
 
     public function delete(int $id)
