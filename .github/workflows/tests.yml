@@ -1,0 +1,51 @@
+name: Testes da API
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  phpunit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      APP_ENV: testing
+      APP_DEBUG: 'false'
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ':memory:'
+      LOG_CHANNEL: 'null'
+    steps:
+      - name: Obter o código
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Configurar PHP e Composer
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: ctype, iconv, mbstring, pdo, pdo_sqlite, sqlite3, dom, xml, xmlwriter, curl, fileinfo, tokenizer, zip
+          tools: composer:v2
+          coverage: none
+
+      - name: Validar o manifesto Composer
+        run: composer validate --strict --no-check-publish
+
+      - name: Instalar dependências do lock
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Conferir requisitos das dependências
+        run: composer check-platform-reqs
+
+      - name: Gerar chave temporária de testes
+        run: php -r 'echo "APP_KEY=base64:".base64_encode(random_bytes(32)).PHP_EOL;' >> "$GITHUB_ENV"
+
+      - name: Executar a suíte completa
+        run: php vendor/bin/phpunit --do-not-cache-result
