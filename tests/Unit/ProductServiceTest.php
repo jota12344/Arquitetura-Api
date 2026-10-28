@@ -3,125 +3,153 @@
 namespace Tests\Unit;
 
 use App\Interfaces\ProductRepositoryInterface;
-use App\Models\Product;
 use App\Services\ProductService;
 use Mockery;
+use Mockery\MockInterface;
 use PHPUnit\Framework\TestCase;
 
 class ProductServiceTest extends TestCase
 {
+    /** @var ProductRepositoryInterface&MockInterface */
+    protected $repositoryMock;
+
+    protected ProductService $service;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->repositoryMock = Mockery::mock(
+            ProductRepositoryInterface::class
+        );
+
+        $this->service = new ProductService(
+            $this->repositoryMock
+        );
+    }
+
     protected function tearDown(): void
     {
-        Mockery::close();
-
-        parent::tearDown();
+        try {
+            Mockery::close();
+        } finally {
+            parent::tearDown();
+        }
     }
 
     // TESTE 1 - Listar todos os produtos
     public function test_deve_listar_todos_os_produtos(): void
     {
-        $products = collect([
-            new Product(['name' => 'Mouse Gamer', 'price' => 150]),
-            new Product(['name' => 'Teclado', 'price' => 250]),
-        ]);
+        $produtos = [
+            ['id' => 1, 'name' => 'Mouse', 'price' => 100],
+            ['id' => 2, 'name' => 'Teclado', 'price' => 200],
+        ];
 
-        $repository = Mockery::mock(ProductRepositoryInterface::class);
+        $this->repositoryMock
+        ->shouldReceive('getAll')
+        ->once()
+        ->with([])
+        ->andReturn($produtos);
+        $resultado = $this->service->getAll();
 
-        $repository->shouldReceive('getAll')
-            ->once()
-            ->andReturn($products);
-
-        $service = new ProductService($repository);
-
-        $resultado = $service->getAll();
-
-        $this->assertSame($products, $resultado);
+        $this->assertEquals($produtos, $resultado);
     }
 
-    // TESTE 2 - Consultar produto por ID
-    public function test_deve_buscar_produto_por_id(): void
+    public function test_deve_encaminhar_filtros_ao_repository(): void
     {
-        $product = new Product([
-            'name' => 'Monitor Gamer',
-            'price' => 899.90,
-        ]);
+        $filters = ['name' => 'Mouse', 'min_price' => 100, 'max_price' => 500];
+        $products = [['id' => 1, 'name' => 'Mouse Gamer', 'price' => 150]];
 
-        $repository = Mockery::mock(ProductRepositoryInterface::class);
+        $this->repositoryMock
+            ->shouldReceive('getAll')
+            ->once()
+            ->with($filters)
+            ->andReturn($products);
 
-        $repository->shouldReceive('findById')
+        $this->assertSame($products, $this->service->getAll($filters));
+    }
+
+    // TESTE 2 - Buscar produto pelo ID
+    public function test_deve_buscar_produto_pelo_id(): void
+    {
+        $produto = [
+            'id' => 1,
+            'name' => 'Mouse',
+            'price' => 100,
+        ];
+
+        $this->repositoryMock
+            ->shouldReceive('findById')
             ->once()
             ->with(1)
-            ->andReturn($product);
+            ->andReturn($produto);
 
-        $service = new ProductService($repository);
+        $resultado = $this->service->findById(1);
 
-        $resultado = $service->findById(1);
-
-        $this->assertSame($product, $resultado);
+        $this->assertEquals($produto, $resultado);
     }
 
     // TESTE 3 - Criar produto
-    public function test_deve_criar_um_produto(): void
+    public function test_deve_criar_produto(): void
     {
         $dados = [
-            'name' => 'Mouse Gamer',
-            'price' => 150.00,
+            'name' => 'Monitor',
+            'price' => 800,
         ];
 
-        $product = new Product($dados);
+        $produtoCriado = [
+            'id' => 3,
+            'name' => 'Monitor',
+            'price' => 800,
+        ];
 
-        $repository = Mockery::mock(ProductRepositoryInterface::class);
-
-        $repository->shouldReceive('create')
+        $this->repositoryMock
+            ->shouldReceive('create')
             ->once()
             ->with($dados)
-            ->andReturn($product);
+            ->andReturn($produtoCriado);
 
-        $service = new ProductService($repository);
+        $resultado = $this->service->create($dados);
 
-        $resultado = $service->create($dados);
-
-        $this->assertSame($product, $resultado);
+        $this->assertEquals($produtoCriado, $resultado);
     }
 
     // TESTE 4 - Atualizar produto
-    public function test_deve_atualizar_um_produto(): void
+    public function test_deve_atualizar_produto(): void
     {
         $dados = [
             'name' => 'Mouse Atualizado',
-            'price' => 199.90,
+            'price' => 150,
         ];
 
-        $product = new Product($dados);
+        $produtoAtualizado = [
+            'id' => 1,
+            'name' => 'Mouse Atualizado',
+            'price' => 150,
+        ];
 
-        $repository = Mockery::mock(ProductRepositoryInterface::class);
-
-        $repository->shouldReceive('update')
+        $this->repositoryMock
+            ->shouldReceive('update')
             ->once()
             ->with(1, $dados)
-            ->andReturn($product);
+            ->andReturn($produtoAtualizado);
 
-        $service = new ProductService($repository);
+        $resultado = $this->service->update(1, $dados);
 
-        $resultado = $service->update(1, $dados);
-
-        $this->assertSame($product, $resultado);
+        $this->assertEquals($produtoAtualizado, $resultado);
     }
 
     // TESTE 5 - Excluir produto
-    public function test_deve_excluir_um_produto(): void
+    public function test_deve_excluir_produto(): void
     {
-        $repository = Mockery::mock(ProductRepositoryInterface::class);
-
-        $repository->shouldReceive('delete')
+        $this->repositoryMock
+            ->shouldReceive('delete')
             ->once()
-            ->with(1);
+            ->with(1)
+            ->andReturn(true);
 
-        $service = new ProductService($repository);
+        $resultado = $this->service->delete(1);
 
-        $service->delete(1);
-
-        // Mockery verifica se delete(1) foi chamado uma vez
-        $this->assertTrue(true);
+        $this->assertTrue($resultado);
     }
 }

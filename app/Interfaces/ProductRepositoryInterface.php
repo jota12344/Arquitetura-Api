@@ -1,10 +1,9 @@
 <?php
 
 namespace App\Interfaces;
-
 interface ProductRepositoryInterface
 {
-    public function getAll();
+    public function getAll(array $filters = []);
 
     public function findById(int $id);
 

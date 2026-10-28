@@ -3,6 +3,7 @@
 namespace App\Exceptions;
 
 use App\Models\Product;
+use App\Models\Category;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -24,6 +25,11 @@ class Handler extends ExceptionHandler
         'password_confirmation',
     ];
 
+    protected function shouldReturnJson($request, Throwable $e)
+    {
+        return $request->is('api/*') || parent::shouldReturnJson($request, $e);
+    }
+
     public function register()
     {
         $this->reportable(function (Throwable $e) {
@@ -39,10 +45,12 @@ class Handler extends ExceptionHandler
             if (
                 $request->is('api/*') &&
                 $previous instanceof ModelNotFoundException &&
-                $previous->getModel() === Product::class
+                in_array($previous->getModel(), [Product::class, Category::class], true)
             ) {
                 return response()->json([
-                    'message' => 'Produto não encontrado.'
+                    'message' => $previous->getModel() === Product::class
+                        ? 'Produto não encontrado.'
+                        : 'Categoria não encontrada.'
                 ], 404);
             }
         });

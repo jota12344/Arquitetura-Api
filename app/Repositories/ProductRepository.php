@@ -7,19 +7,47 @@ use App\Models\Product;
 
 class ProductRepository implements ProductRepositoryInterface
 {
-    public function getAll()
-    {
-        return Product::all();
+ 
+public function getAll(array $filters = [])
+{
+    // Inicia a consulta
+    $query = Product::query()->with('category');
+
+    // Filtra pelo nome
+    if (isset($filters['name']) && $filters['name'] !== '') {
+        $query->where(
+            'name',
+            'like',
+            '%' . $filters['name'] . '%'
+        );
     }
+
+    // Filtra pelo preço mínimo
+    if (isset($filters['min_price'])) {
+        $query->where('price', '>=', $filters['min_price']);
+    }
+
+    // Filtra pelo preço máximo
+    if (isset($filters['max_price'])) {
+        $query->where('price', '<=', $filters['max_price']);
+    }
+
+    if (isset($filters['category_id'])) {
+        $query->where('category_id', $filters['category_id']);
+    }
+
+    // Ordena e pagina os resultados
+    return $query->orderBy('id', 'desc')->paginate(10);
+}
 
     public function findById(int $id)
     {
-        return Product::findOrFail($id);
+        return Product::with('category')->findOrFail($id);
     }
 
     public function create(array $data)
     {
-        return Product::create($data);
+        return Product::create($data)->load('category');
     }
 
     public function update(int $id, array $data)
@@ -28,7 +56,7 @@ class ProductRepository implements ProductRepositoryInterface
 
         $product->update($data);
 
-        return $product;
+        return $product->load('category');
     }
 
     public function delete(int $id)

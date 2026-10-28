@@ -5,14 +5,24 @@ namespace Tests\Feature;
 use App\Models\Product;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use App\Models\User;
+use Laravel\Sanctum\Sanctum;
 
 class ProductTest extends TestCase
 {
     use RefreshDatabase;
+    protected function autenticarUsuario(): void
+{
+    $user = User::factory()->create();
+
+    Sanctum::actingAs($user);
+}
 
     // TESTE 1 - Criar um produto
     public function test_deve_criar_um_produto(): void
     {
+        $this->autenticarUsuario();
+
         $dados = [
             'name' => 'Mouse Gamer',
             'price' => 150.00,
@@ -87,57 +97,66 @@ class ProductTest extends TestCase
         ]);
     }
 
-    // TESTE 5 - Atualizar produto
-    public function test_deve_atualizar_um_produto(): void
-    {
-        $product = Product::create([
-            'name' => 'Mouse Antigo',
-            'price' => 50.00,
-        ]);
+   // TESTE 5 - Atualizar produto
+public function test_deve_atualizar_um_produto(): void
+{
+    $this->autenticarUsuario();
 
-        $dadosAtualizados = [
-            'name' => 'Mouse Gamer RGB',
-            'price' => 199.90,
-        ];
+    $product = Product::create([
+        'name' => 'Mouse Antigo',
+        'price' => 50.00,
+        'user_id' => auth()->id(),
+    ]);
 
-        $response = $this->putJson(
-            "/api/products/{$product->id}",
-            $dadosAtualizados
-        );
+    $dadosAtualizados = [
+        'name' => 'Mouse Gamer RGB',
+        'price' => 199.90,
+    ];
 
-        $response->assertStatus(200);
+    $response = $this->putJson(
+        "/api/products/{$product->id}",
+        $dadosAtualizados
+    );
 
-        $response->assertJsonPath('data.name', 'Mouse Gamer RGB');
+    $response->assertStatus(200);
 
-        $this->assertDatabaseHas('products', [
-            'id' => $product->id,
-            'name' => 'Mouse Gamer RGB',
-            'price' => 199.90,
-        ]);
-    }
+    $response->assertJsonPath('data.name', 'Mouse Gamer RGB');
 
-    // TESTE 6 - Excluir produto
-    public function test_deve_excluir_um_produto(): void
-    {
-        $product = Product::create([
-            'name' => 'Produto para Excluir',
-            'price' => 100.00,
-        ]);
+    $this->assertDatabaseHas('products', [
+        'id' => $product->id,
+        'name' => 'Mouse Gamer RGB',
+        'price' => 199.90,
+        'user_id' => auth()->id(),
+    ]);
+}
 
-        $response = $this->deleteJson(
-            "/api/products/{$product->id}"
-        );
+   // TESTE 6 - Excluir produto
+public function test_deve_excluir_um_produto(): void
+{
+    $this->autenticarUsuario();
 
-        $response->assertNoContent();
+    $product = Product::create([
+        'name' => 'Produto para Excluir',
+        'price' => 100.00,
+        'user_id' => auth()->id(),
+    ]);
 
-        $this->assertDatabaseMissing('products', [
-            'id' => $product->id,
-        ]);
-    }
+    $response = $this->deleteJson(
+        "/api/products/{$product->id}"
+    );
+
+    $response->assertNoContent();
+
+    $this->assertDatabaseMissing('products', [
+        'id' => $product->id,
+    ]);
+}
 
     // TESTE 7 - Impedir preço negativo no cadastro
     public function test_nao_deve_criar_produto_com_preco_negativo(): void
     {
+        $this->autenticarUsuario();
+
         $dados = [
             'name' => 'Produto Inválido',
             'price' => -50,
@@ -155,6 +174,8 @@ class ProductTest extends TestCase
     // TESTE 8 - Impedir cadastro sem nome
     public function test_nao_deve_criar_produto_sem_nome(): void
     {
+        $this->autenticarUsuario();
+
         $dados = [
             'price' => 100.00,
         ];
@@ -171,6 +192,8 @@ class ProductTest extends TestCase
     // TESTE 9 - Impedir atualização com preço negativo
     public function test_nao_deve_atualizar_produto_com_preco_negativo(): void
     {
+        $this->autenticarUsuario();
+
         $product = Product::create([
             'name' => 'Teclado',
             'price' => 150.00,
@@ -198,6 +221,8 @@ class ProductTest extends TestCase
     // TESTE 10 - Impedir atualização de produto inexistente
     public function test_nao_deve_atualizar_produto_inexistente(): void
     {
+        $this->autenticarUsuario();
+
         $response = $this->putJson('/api/products/99999', [
             'name' => 'Produto Atualizado',
             'price' => 100.00,
@@ -213,6 +238,8 @@ class ProductTest extends TestCase
     // TESTE 11 - Impedir exclusão de produto inexistente
     public function test_nao_deve_excluir_produto_inexistente(): void
     {
+        $this->autenticarUsuario();
+
         $response = $this->deleteJson('/api/products/99999');
 
         $response->assertStatus(404);
@@ -221,4 +248,246 @@ class ProductTest extends TestCase
             'message' => 'Produto não encontrado.',
         ]);
     }
+    
+    // TESTE 12 - Impedir cadastro com múltiplos campos inválidos
+    public function test_nao_deve_criar_produto_com_nome_vazio_e_preco_negativo(): void
+    {
+        $this->autenticarUsuario();
+
+        $dados = [
+        'name' => '',
+        'price' => -50,
+    ];
+
+    $response = $this->postJson('/api/products', $dados);
+
+    // Verifica se a API rejeitou os dados
+    $response->assertStatus(422);
+
+    // Verifica se os dois campos possuem erros
+    $response->assertJsonValidationErrors([
+        'name',
+        'price',
+    ]);
+
+    // Garante que nenhum produto foi cadastrado
+    $this->assertDatabaseCount('products', 0);
+    }
+
+    // TESTE 13 - Impedir atualização de produto de outro usuário
+public function test_nao_deve_atualizar_produto_de_outro_usuario(): void
+{
+    // Cria dois usuários
+    $usuario = User::factory()->create();
+    $outroUsuario = User::factory()->create();
+
+    // Cria um produto pertencente ao outro usuário
+    $product = Product::create([
+        'name' => 'Mouse Gamer',
+        'price' => 150.00,
+        'user_id' => $outroUsuario->id,
+    ]);
+
+    // Autentica o primeiro usuário
+    $this->actingAs($usuario);
+
+    // Tenta atualizar o produto de outra pessoa
+    $response = $this->putJson(
+        "/api/products/{$product->id}",
+        [
+            'name' => 'Mouse Alterado',
+            'price' => 200.00,
+        ]
+    );
+
+    // A API deve negar a atualização
+    $response->assertStatus(403);
+
+    // Confirma que os dados originais foram preservados
+    $this->assertDatabaseHas('products', [
+        'id' => $product->id,
+        'name' => 'Mouse Gamer',
+        'user_id' => $outroUsuario->id,
+    ]);
 }
+
+// TESTE 14 - Impedir exclusão de produto de outro usuário
+public function test_nao_deve_excluir_produto_de_outro_usuario(): void
+{
+    // Cria dois usuários diferentes
+    $usuario = User::factory()->create();
+    $outroUsuario = User::factory()->create();
+
+    // Cria um produto pertencente ao outro usuário
+    $product = Product::create([
+        'name' => 'Teclado Mecânico',
+        'price' => 250.00,
+        'user_id' => $outroUsuario->id,
+    ]);
+
+    // Autentica o primeiro usuário
+    $this->actingAs($usuario);
+
+    // Tenta excluir o produto de outra pessoa
+    $response = $this->deleteJson(
+        "/api/products/{$product->id}"
+    );
+
+    // Verifica que a API negou a exclusão
+    $response->assertStatus(403);
+
+    // Verifica que o produto continua no banco de dados
+    $this->assertDatabaseHas('products', [
+        'id' => $product->id,
+        'name' => 'Teclado Mecânico',
+        'user_id' => $outroUsuario->id,
+    ]);
+}
+
+// TESTE 15 - Listar produtos com paginação
+public function test_deve_listar_produtos_com_paginacao(): void
+{
+    // Cria 25 produtos no banco de testes
+    for ($i = 1; $i <= 25; $i++) {
+        Product::create([
+            'name' => "Produto {$i}",
+            'price' => 100.00,
+        ]);
+    }
+
+    // Consulta a primeira página
+    $response = $this->getJson('/api/products?page=1');
+
+    // Verifica se a requisição funcionou
+    $response->assertStatus(200);
+
+    // Verifica se retornou exatamente 10 produtos
+    $response->assertJsonCount(10, 'data');
+
+    // Verifica os metadados da paginação
+    $response->assertJsonPath('meta.current_page', 1);
+    $response->assertJsonPath('meta.last_page', 3);
+    $response->assertJsonPath('meta.per_page', 10);
+    $response->assertJsonPath('meta.total', 25);
+}
+
+// TESTE 16 - Verificar segunda página da listagem
+public function test_deve_listar_segunda_pagina_de_produtos(): void
+{
+    // Cria 25 produtos
+    for ($i = 1; $i <= 25; $i++) {
+        Product::create([
+            'name' => "Produto {$i}",
+            'price' => 100.00,
+        ]);
+    }
+
+    // Consulta a segunda página
+    $response = $this->getJson('/api/products?page=2');
+
+    // Verifica o status HTTP
+    $response->assertStatus(200);
+
+    // A segunda página deve conter 10 produtos
+    $response->assertJsonCount(10, 'data');
+
+    // Verifica os metadados
+    $response->assertJsonPath('meta.current_page', 2);
+    $response->assertJsonPath('meta.last_page', 3);
+    $response->assertJsonPath('meta.total', 25);
+
+    // Confirma a ordenação decrescente
+    $response->assertJsonPath('data.0.name', 'Produto 15');
+    $response->assertJsonPath('data.9.name', 'Produto 6');
+}
+
+// TESTE 17 - Verificar última página da listagem
+public function test_deve_listar_ultima_pagina_de_produtos(): void
+{
+    // Cria 25 produtos no banco de testes
+    for ($i = 1; $i <= 25; $i++) {
+        Product::create([
+            'name' => "Produto {$i}",
+            'price' => 100.00,
+        ]);
+    }
+
+    // Consulta a terceira página
+    $response = $this->getJson('/api/products?page=3');
+
+    // Verifica o status HTTP
+    $response->assertStatus(200);
+
+    // A última página deve conter apenas 5 produtos
+    $response->assertJsonCount(5, 'data');
+
+    // Verifica os metadados da paginação
+    $response->assertJsonPath('meta.current_page', 3);
+    $response->assertJsonPath('meta.last_page', 3);
+    $response->assertJsonPath('meta.per_page', 10);
+    $response->assertJsonPath('meta.total', 25);
+
+    // Confirma a ordenação decrescente
+    $response->assertJsonPath('data.0.name', 'Produto 5');
+    $response->assertJsonPath('data.4.name', 'Produto 1');
+
+    // Confirma que não existe próxima página
+    $response->assertJsonPath('links.next', null);
+}
+
+// TESTE 18 - Buscar produtos pelo nome
+public function test_deve_filtrar_produtos_pelo_nome(): void
+{
+    // Cria produtos para testar a busca
+    Product::create([
+        'name' => 'Mouse Gamer',
+        'price' => 150.00,
+    ]);
+
+    Product::create([
+        'name' => 'Mouse Sem Fio',
+        'price' => 100.00,
+    ]);
+
+    Product::create([
+        'name' => 'Teclado Mecânico',
+        'price' => 250.00,
+    ]);
+
+    // Realiza a busca pelo nome
+    $response = $this->getJson('/api/products?name=Mouse');
+
+    // Verifica se a requisição funcionou
+    $response->assertStatus(200);
+
+    // Apenas dois produtos devem ser retornados
+    $response->assertJsonCount(2, 'data');
+
+    // Confirma os produtos encontrados
+    $response->assertJsonPath('data.0.name', 'Mouse Sem Fio');
+    $response->assertJsonPath('data.1.name', 'Mouse Gamer');
+
+    // Confirma que o filtro também afeta a paginação
+    $response->assertJsonPath('meta.total', 2);
+}
+
+// TESTE 19 - Rejeitar filtro de nome muito longo
+public function test_deve_rejeitar_filtro_de_nome_muito_longo(): void
+{
+    // Cria uma string com 256 caracteres
+    $nomeMuitoLongo = str_repeat('A', 256);
+
+    // Envia o filtro inválido pela URL
+    $response = $this->getJson(
+        '/api/products?name=' . $nomeMuitoLongo
+    );
+
+    // Verifica se a API rejeitou a requisição
+    $response->assertStatus(422);
+
+    // Verifica se o erro corresponde ao campo name
+    $response->assertJsonValidationErrors(['name']);
+}
+}
+
+
