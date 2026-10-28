@@ -1,6 +1,6 @@
 # Ambiente de desenvolvimento e CI
 
-Guia básico da etapa 4. A documentação completa da API será preparada na etapa 5.
+Guia de instalação e CI. Consulte também o [README](../README.md) e a [documentação da API](api.md).
 
 ## Instalação em um clone novo
 
@@ -9,13 +9,13 @@ O PHP local precisa das extensões exigidas pelo Composer; use `composer check-p
 No Windows, execute no WSL2. O runtime PHP 8.3 vem do Sail já fixado no `composer.lock`.
 
 ```bash
-git clone https://github.com/jota12344/arquitetura-api.git
+git clone "URL_DO_REPOSITORIO"
 cd arquitetura-api
 composer install
 cp .env.example .env
 ```
 
-O comando `cp` é para um clone novo: preserve o `.env` se ele já existir.
+Substitua `URL_DO_REPOSITORIO` pela URL do seu clone. O comando `cp` é para um clone novo: preserve o `.env` se ele já existir.
 Preencha `DB_PASSWORD` e `MYSQL_ROOT_PASSWORD` no `.env` com duas senhas locais distintas.
 Você pode gerar cada uma com `openssl rand -hex 24`. Não publique esses valores.
 No Linux/WSL, ajuste `WWWUSER` e `WWWGROUP` com os resultados de `id -u` e `id -g`.
